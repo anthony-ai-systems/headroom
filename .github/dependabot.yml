@@ -1,0 +1,30 @@
+version: 2
+
+# No "pip" entry: the Python engine under headroom/ is deliberately
+# stdlib-only (install.sh: "No pip, no sudo") and the repo ships no
+# pyproject.toml / requirements.txt / setup.py for Dependabot to read.
+# Pointing an ecosystem at a directory with no manifest only produces
+# recurring "no dependency files found" errors. Add a pip entry the
+# moment a Python manifest lands.
+
+updates:
+  # Desktop menu-bar frontend (package.json + package-lock.json).
+  - package-ecosystem: "npm"
+    directory: "/integrations/menubar"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # Tauri native shell (Cargo.toml + Cargo.lock).
+  - package-ecosystem: "cargo"
+    directory: "/integrations/menubar/src-tauri"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # GitHub Actions used by .github/workflows/ci.yml.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
