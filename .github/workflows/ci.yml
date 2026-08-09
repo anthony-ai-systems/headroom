@@ -5,6 +5,11 @@ on:
   pull_request:
   push:
     branches: [master]
+  schedule:
+    # Weekly canary: the desktop job builds against moving upstream surfaces
+    # (macos-14 runner image, Tauri toolchain); a scheduled run catches drift
+    # without waiting for the next code push.
+    - cron: "23 10 * * 1"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -36,10 +41,41 @@ jobs:
           env PATH="$PWD/tests/fixtures/bin:$PATH"
           uv run --python 3.13.12 python -m unittest discover -s tests
 
+  changes:
+    name: Detect desktop-relevant changes
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 5
+    outputs:
+      # Fallback 'true': on schedule/workflow_dispatch the filter step is
+      # skipped and the desktop job must always run.
+      desktop: ${{ steps.filter.outputs.desktop || 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        id: filter
+        with:
+          # 'every' + negated globs: desktop is relevant unless a changed file
+          # matches ALL the exclusions, i.e. doc/marketing-only diffs skip the
+          # 10x-billed macOS build. Everything else (engine, scripts, menubar,
+          # VERSION, workflows, ...) still triggers it.
+          predicate-quantifier: every
+          filters: |
+            desktop:
+              - '!docs/**'
+              - '!marketing/**'
+              - '!**/*.md'
+              - '!LICENSE'
+
   desktop:
     name: Unsigned desktop tracer (macOS)
     runs-on: macos-14
     timeout-minutes: 60
+    needs: changes
+    # Skipping still satisfies the required "Unsigned desktop tracer (macOS)"
+    # context (a skipped job reports as passing to branch protection); a
+    # workflow-level paths: filter would instead leave it "Expected" forever.
+    if: needs.changes.outputs.desktop == 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v9.0.0
