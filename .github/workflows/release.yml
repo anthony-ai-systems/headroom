@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# No cancel-in-progress: never kill a release run mid-publish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  unsigned-release:
+    name: Unsigned tracer release (macOS)
+    runs-on: macos-14
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          version: "0.11.29"
+          python-version: "3.13.12"
+          enable-cache: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: integrations/menubar/package-lock.json
+      - uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          components: rustfmt
+      - name: Verify the single release version and tag agreement
+        id: release-version
+        run: |
+          uv run --python 3.13.12 python scripts/release-version.py --check
+          uv run --python 3.13.12 python scripts/updater_release.py --check-config
+          VERSION=$(tr -d '[:space:]' < VERSION)
+          if [ "$GITHUB_REF_NAME" != "v${VERSION}" ]; then
+            echo "Ref '$GITHUB_REF_NAME' does not match VERSION 'v${VERSION}'" >&2
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "target=$(rustc --print host-tuple)" >> "$GITHUB_OUTPUT"
+      # Same build-and-test path as the CI desktop job: the release artifact
+      # must pass everything a PR build passes.
+      - name: Build and smoke-test the frozen sidecar
+        run: scripts/build-desktop-sidecar.sh
+      - name: Test the private bridge
+        run: uv run --python 3.13.12 python -m unittest tests.test_desktop_bridge
+      - name: Install pinned accessibility test dependencies
+        run: npm ci --prefix integrations/menubar --ignore-scripts
+      - name: Test the frontend state boundary
+        run: npm --prefix integrations/menubar test
+      - name: Test the native shell
+        run: cargo test --locked --manifest-path integrations/menubar/src-tauri/Cargo.toml
+      - name: Build the unsigned app
+        working-directory: integrations/menubar
+        run: npx --yes @tauri-apps/cli@2.11.4 build --bundles app
+      - name: Archive the unsigned tracer
+        run: >-
+          ditto -c -k --sequesterRsrc --keepParent
+          integrations/menubar/src-tauri/target/release/bundle/macos/Headroom.app
+          Headroom-${{ steps.release-version.outputs.version }}-${{ steps.release-version.outputs.target }}-unsigned.zip
+      # Unsigned distribution build only. This is deliberately NOT the Tauri
+      # updater channel: signed updater artifacts require the minisign private
+      # key (no Actions secrets exist in this repo), and updater_release.py
+      # pins its channel endpoints to a different repository. Both are
+      # operator-level decisions before updater CD can exist.
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "Headroom-${{ steps.release-version.outputs.version }}-${{ steps.release-version.outputs.target }}-unsigned.zip" \
+            --verify-tag \
+            --title "Headroom ${{ steps.release-version.outputs.version }} (unsigned)" \
+            --notes "Unsigned macOS tracer build from ${GITHUB_SHA}, built and tested by the same pipeline as CI. Not an updater-channel release."
