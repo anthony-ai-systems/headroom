@@ -29,7 +29,6 @@ jobs:
         with:
           version: "0.11.29"
           python-version: "3.13.12"
-          enable-cache: true
       - name: Verify the single release version
         run: |
           uv run --python 3.13.12 python scripts/release-version.py --check
@@ -82,7 +81,6 @@ jobs:
         with:
           version: "0.11.29"
           python-version: "3.13.12"
-          enable-cache: true
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
