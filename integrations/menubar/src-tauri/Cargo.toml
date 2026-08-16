@@ -25,7 +25,7 @@ tauri-plugin-updater = "=2.10.1"
 tokio = { version = "=1.52.0", features = ["net", "time"] }
 open = "=5.4.1"
 serde_json = "=1.0.151"
-tiny-skia = "=0.11.4"
+tiny-skia = "=0.12.0"
 libc = "=0.2.189"
 
 [target.'cfg(target_os = "macos")'.dependencies]
