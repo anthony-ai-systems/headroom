@@ -28,3 +28,10 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      # dtolnay/rust-toolchain pre-creates placeholder branches for unreleased
+      # Rust versions (1.98/1.99/1.100 existed upstream as of 2026-08 with no
+      # matching Rust release); Dependabot reads them as real versions and PRs
+      # bumps whose `rustup toolchain install` 404s in CI. Bump this pin by
+      # hand when a new Rust actually ships.
+      - dependency-name: "dtolnay/rust-toolchain"
