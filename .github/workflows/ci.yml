@@ -24,8 +24,8 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.11.29"
           python-version: "3.13.12"
@@ -49,7 +49,7 @@ jobs:
       # skipped and the desktop job must always run.
       desktop: ${{ steps.filter.outputs.desktop || 'true' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         if: github.event_name == 'pull_request' || github.event_name == 'push'
         id: filter
@@ -76,18 +76,19 @@ jobs:
     # workflow-level paths: filter would instead leave it "Expected" forever.
     if: needs.changes.outputs.desktop == 'true'
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.11.29"
           python-version: "3.13.12"
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: integrations/menubar/package-lock.json
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: dtolnay/rust-toolchain@032958afbdc797a9164d3bc0b56325c1308924a5 # 1.97.1
         with:
+          toolchain: 1.97.1
           components: rustfmt
       - name: Verify the single release version
         id: release-version
@@ -115,7 +116,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent
           integrations/menubar/src-tauri/target/release/bundle/macos/Headroom.app
           Headroom-${{ steps.release-version.outputs.version }}-${{ steps.release-version.outputs.target }}-unsigned.zip
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Headroom-${{ steps.release-version.outputs.version }}-${{ steps.release-version.outputs.target }}-unsigned
           path: Headroom-${{ steps.release-version.outputs.version }}-${{ steps.release-version.outputs.target }}-unsigned.zip
@@ -126,7 +127,7 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       # gitleaks-action requires a GITLEAKS_LICENSE on organization-owned
